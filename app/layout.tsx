@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ヴァロラント自己紹介カードメーカー Valorant Re:Card",
+  title: "Re:Card ヴァロラント自己紹介カードメーカー",
   description: "Valorant自己紹介カードを作ろう！",
   icons: {
     icon: "/favicon.ico",

@@ -269,18 +269,18 @@ export default function Page() {
 
   // 入力フォーム
   const [selectedCard, setSelectedCard] = useState<string>("");
-  const [name, setName] = useState<string>(""); // NAME 下段
+  const [name, setName] = useState<string>("ねっけつ太郎"); // NAME 下段
   const [gender, setGender] = useState<Gender>(null);
   const [typeExtraKey, setTypeExtraKey] = useState<ExtraMetricKey | null>(null);
   const [typeExtraVal, setTypeExtraVal] = useState<string>("");
-  const [rank, setRank] = useState<RankKey>("iron1");
+  const [rank, setRank] = useState<RankKey>("ascendant3");
   const [main1, setMain1] = useState<string>("Astra"); // 必須相当（空選択不可想定）
   const [main2, setMain2] = useState<string>("");      // 任意
-  const [weekdayFrom, setWeekdayFrom] = useState<number>(18);
+  const [weekdayFrom, setWeekdayFrom] = useState<number>(20);
   const [weekdayTo, setWeekdayTo] = useState<number>(24);
-  const [holidayFrom, setHolidayFrom] = useState<number>(12);
+  const [holidayFrom, setHolidayFrom] = useState<number>(18);
   const [holidayTo, setHolidayTo] = useState<number>(26);
-  const [freeText, setFreeText] = useState<string>(""); // 自由表記：1入力→折返し
+  const [freeText, setFreeText] = useState<string>("「勝ちに行く、それだけだ」"); // 自由表記：1入力→折返し
 
   type FooterLine = { key: string | null; value: string };
   const [footer1, setFooter1] = useState<FooterLine>({ key: null, value: "" });
@@ -562,8 +562,9 @@ export default function Page() {
    * =======================================================*/
   return (
     <div className="mx-auto max-w-[1800px] px-4 md:px-6 py-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* 左：入力（PC） / 下：入力（SP） */}
+      {/* ★ SP=flex-col-reverse / MD+=grid */}
+      <div className="flex flex-col-reverse md:grid md:grid-cols-2 gap-6">
+        {/* 左：入力（SPでは下、MD+で左） */}
         <div className="space-y-6">
           {/* 1) 背景選択 */}
           <section className="p-4 rounded-2xl border border-neutral-800 bg-neutral-900/40">
@@ -579,12 +580,11 @@ export default function Page() {
                 return <option key={p} value={p}>{display}</option>;
               })}
             </select>
-            <p className="text-sm text-neutral-400 mt-2">/api/list-cards に設定したフォルダへ追加で即反映（ビルド不要）</p>
           </section>
 
           {/* 2) 回答フォント（ユーザー選択） */}
           <section className="p-4 rounded-2xl border border-neutral-800 bg-neutral-900/40">
-            <h2 className="text-lg font-semibold mb-3">回答フォント（ユーザー入力値に適用）</h2>
+            <h2 className="text-lg font-semibold mb-3">フォントを選択</h2>
             <select
               className="w-full bg-neutral-800 rounded-md p-2"
               value={valueFontFile}
@@ -594,15 +594,11 @@ export default function Page() {
                 <option key={f} value={f}>{getFontLabel(f)}</option>
               ))}
             </select>
-            <p className="text-xs text-neutral-500 mt-2">
-              現在の family: <code>{valueFontFamily}</code><br />
-              ※ ラベル系は固定フォント：<code>{FIXED_LABEL_FONT_URL}</code>（family: <code>{FIXED_LABEL_FONT_FAMILY}</code>）
-            </p>
           </section>
 
           {/* 3) 名前 */}
           <section className="p-4 rounded-2xl border border-neutral-800 bg-neutral-900/40">
-            <h2 className="text-lg font-semibold mb-3">名前（NAME の下段に表示）</h2>
+            <h2 className="text-lg font-semibold mb-3">名前</h2>
             <input
               className="w-full bg-neutral-800 rounded-md p-2"
               placeholder="例：nekke2_nakano"
@@ -614,13 +610,14 @@ export default function Page() {
 
           {/* 4) TYPE（性別 & 追加メトリクス） */}
           <section className="p-4 rounded-2xl border border-neutral-800 bg-neutral-900/40">
-            <h2 className="text-lg font-semibold mb-3">TYPE</h2>
+            <h2 className="text-lg font-semibold mb-3">性別</h2>
             <div className="flex items-center gap-3">
               <label className="flex items-center gap-1"><input type="radio" name="gender" onChange={() => setGender("male")} checked={gender === "male"} /> ♂</label>
               <label className="flex items-center gap-1"><input type="radio" name="gender" onChange={() => setGender("female")} checked={gender === "female"} /> ♀</label>
               <label className="flex items-center gap-1"><input type="radio" name="gender" onChange={() => setGender(null)} checked={gender === null} /> 未選択</label>
             </div>
 
+            <h2 className="text-lg font-semibold mb-3 mt-4">アピール（選択式）</h2>
             <div className="mt-3 grid grid-cols-3 gap-2">
               <select
                 className="bg-neutral-800 rounded-md p-2 col-span-1"
@@ -628,7 +625,7 @@ export default function Page() {
                 onChange={(e) => setTypeExtraKey((e.target.value || "") as ExtraMetricKey || null)}
               >
                 {EXTRA_METRIC_OPTIONS.map((v) => (
-                  <option key={v || "none"} value={v}>{v || "（入力しない）"}</option>
+                  <option key={v || "none"} value={v}>{v || "入力しない"}</option>
                 ))}
               </select>
               <input
@@ -640,11 +637,12 @@ export default function Page() {
                 disabled={!typeExtraKey}
               />
             </div>
+            <p className="text-sm text-neutral-400 mt-2">※ ACEは平均バトルスコア、K/Dはキルデス比、WINSは勝率、AGEは年齢（20↑ など）を記載</p>
           </section>
 
           {/* 5) Rank */}
           <section className="p-4 rounded-2xl border border-neutral-800 bg-neutral-900/40">
-            <h2 className="text-lg font-semibold mb-3">RANK</h2>
+            <h2 className="text-lg font-semibold mb-3">ランク</h2>
             <div className="grid grid-cols-2 gap-2 items-center">
               <select
                 className="bg-neutral-800 rounded-md p-2"
@@ -653,13 +651,12 @@ export default function Page() {
               >
                 {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
               </select>
-              <div className="text-sm text-neutral-400">バッジ画像：<code>{rankBadgeBase}/{rank}.png</code></div>
             </div>
           </section>
 
           {/* 6) Main Agent */}
           <section className="p-4 rounded-2xl border border-neutral-800 bg-neutral-900/40">
-            <h2 className="text-lg font-semibold mb-3">MAIN AGENT</h2>
+            <h2 className="text-lg font-semibold mb-3">メインエージェント</h2>
             <div className="grid grid-cols-2 gap-2">
               <select className="bg-neutral-800 rounded-md p-2" value={main1} onChange={(e) => setMain1(e.target.value)}>
                 {agents.map(a => <option key={a} value={a}>{a}</option>)}
@@ -669,12 +666,12 @@ export default function Page() {
                 {agents.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
             </div>
-            <p className="text-sm text-neutral-400 mt-2">※ /data/agents.json を編集すると即反映（再ビルド不要）</p>
+            <p className="text-sm text-neutral-400 mt-2">※ 一人目は必須入力、二人まで得意エージェントを選択できます</p>
           </section>
 
           {/* 7) Play Style */}
           <section className="p-4 rounded-2xl border border-neutral-800 bg-neutral-900/40">
-            <h2 className="text-lg font-semibold mb-3">PLAY STYLE（2行：平日/休日）</h2>
+            <h2 className="text-lg font-semibold mb-3">活動時間</h2>
             <div className="grid grid-cols-2 gap-2 items-center">
               <div>
                 <div className="text-sm mb-1">平日</div>
@@ -697,7 +694,7 @@ export default function Page() {
 
           {/* 8) 自由表記（1入力→Canvasで自動折返し） */}
           <section className="p-4 rounded-2xl border border-neutral-800 bg-neutral-900/40">
-            <h2 className="text-lg font-semibold mb-3">自由表記（1入力／自動折返し）</h2>
+            <h2 className="text-lg font-semibold mb-3">自由表記</h2>
             <input
               className="w-full bg-neutral-800 rounded-md p-2"
               placeholder="自己紹介や一言など"
@@ -705,12 +702,12 @@ export default function Page() {
               maxLength={LIMIT.freeAll}
               onChange={(e) => setFreeText(e.target.value)}
             />
-            <p className="text-xs text-neutral-500 mt-2">※ キャンバスでは最大{LAYOUT.freeMaxLines}行まで自然改行して描画</p>
+            <p className="text-sm text-neutral-400 mt-2">※ ２行まで</p>
           </section>
 
           {/* 9) フッター2行（NULL可） */}
           <section className="p-4 rounded-2xl border border-neutral-800 bg-neutral-900/40">
-            <h2 className="text-lg font-semibold mb-3">三角マーク右側（2行 / NULL可）</h2>
+            <h2 className="text-lg font-semibold mb-3">フッター（選択自由）</h2>
             <FooterLineEditor value={footer1} onChange={setFooter1} />
             <div className="h-3" />
             <FooterLineEditor value={footer2} onChange={setFooter2} />
@@ -733,7 +730,7 @@ export default function Page() {
         </div>
 
         {/* 右：プレビュー（SPでは上・sticky追尾） */}
-        <div className="md:sticky md:top-6" ref={previewContainerRef}>
+        <div className="sticky top-6" ref={previewContainerRef}>
           <div className="w-full border border-neutral-800 rounded-2xl overflow-hidden bg-black/60">
             <div className="p-2 text-sm text-neutral-400">プレビュー</div>
             <div className="p-2 flex justify-center">
@@ -768,7 +765,7 @@ function FooterLineEditor({ value, onChange }: { value: { key: string | null; va
         value={value.key ?? ""}
         onChange={(e) => onChange({ ...value, key: e.target.value || null })}
       >
-        <option value="">（選択なし/NULL）</option>
+        <option value="">選択なし</option>
         {FOOTER_SELECT_ITEMS.map(i => <option key={i.key} value={i.key}>{i.label}</option>)}
       </select>
       <input
