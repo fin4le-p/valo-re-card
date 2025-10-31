@@ -1,24 +1,5 @@
 "use client";
 
-/**
- * Valorant Profile Card Builder – app/page.tsx（フルコピペ可）
- *
- * 仕様：
- *  - ラベル（Age / WINS / Riot ID / RANKテキスト等の“項目名”）は固定フォント：
- *      /opt/valo-intro/public/fonts/PublicSans-VariableFont.woff2
- *    → Web からは /fonts/PublicSans-VariableFont.woff2
- *    → 本ファイル内で family 名を "PublicSansFixed" として強制使用（UIで変更不可）
- *
- *  - 値（24 / riot#3334 / 名前 / MAIN AGENT / PLAY STYLE / 自由表記 など）は
- *    ユーザーが選択したフォントを適用（/api/list-fonts の候補から選択）
- *    → Canvas 描画前に FontFace をロードし、document.fonts を待ってから確実に反映
- *
- *  - 自由表記は1入力 → Canvas側で自動折返し（wrap）して最大2行描画
- *  - SP: プレビューは上 / 入力は下（sticky）
- *    PC: 左入力 / 右プレビュー（sticky）
- *  - プレビューは横・縦の見切れ防止スケール（min fit）
- */
-
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
 // ----------------------------- 型と定数 -----------------------------
@@ -79,16 +60,15 @@ const LAYOUT = {
 
   typeMaleCircle: { x: 634, y: 318, r: 20 },
   typeFemaleCircle: { x: 696, y: 318, r: 20 },
-  typeExtraLabel: { x: 770, y: 318 },
-  typeExtraValue: { x: 850, y: 318 },
+  typeExtraLabel: { x: 770, y: 319 },
+  typeExtraValue: { x: 850, y: 319 },
 
   rankText: { x: 540, y: 425 },
   rankBadge: { x: 860, y: 380, size: 75 },
 
   mainAgent: { x: 540, y: 540 },
 
-  playWeekday: { x: 540, y: 630 },
-  playHoliday: { x: 540, y: 660 },
+  playWeekday: { x: 535, y: 650 },
 
   // 自由表記（1入力を折返し）
   freeStart: { x: 520, y: 735 },
@@ -107,10 +87,9 @@ const STYLE = {
   nameValue: { size: 60, color: "#decfba" },
   typeExtraLabel: { size: 26, color: "#e6383f" },
   typeExtraValue: { size: 26, color: "#decfba" },
-  rankText: { size: 50, color: "#decfba" },
+  rankText: { size: 45, color: "#decfba" },
   agentValue: { size: 36, color: "#decfba" },
-  playWeekday: { size: 22, color: "#decfba" },
-  playHoliday: { size: 22, color: "#decfba" },
+  playWeekday: { size: 32, color: "#decfba" },
   free: { size: 30, color: "#decfba" },
   footerLabel: { size: 24, color: "#decfba" },
   footerValue: { size: 24, color: "#decfba" },
@@ -119,7 +98,6 @@ const STYLE = {
 // ----------------------------- ユーティリティ -----------------------------
 
 function clampText(s: string, n: number) { return s.length <= n ? s : s.slice(0, n); }
-function hourToDisplay(h: number) { return h <= 24 ? `${h}:00` : `翌${h - 24}:00`; }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -175,22 +153,32 @@ function familyFromFilename(file: string) {
 
 /** 指定 family/name と URL をロードして document.fonts に追加し、ready まで待つ */
 async function ensureFontLoaded(family: string, url: string) {
-  // 既に使えるならスキップ
-  if (typeof document !== "undefined" && document.fonts?.check(`12px "${family}"`)) return;
   const key = `${family}@@${url}`;
-  if (fontCache.has(key)) { await fontCache.get(key)!; return; }
+  if (fontCache.has(key)) {
+    await fontCache.get(key)!;
+    return;
+  }
 
   const p = (async () => {
-    const ff = new FontFace(family, `url(${url})`, {
+    // 常に指定URLからロード（checkで早期returnしない）
+    const ff = new FontFace(family, `url("${url}")`, {
       style: "normal",
-      weight: "100 900", // 可変フォント想定
+      weight: "100 900",
       stretch: "normal",
     });
     const loaded = await ff.load();
     (document as any).fonts.add(loaded);
-    await document.fonts.load(`16px "${family}"`);
-    await (document.fonts as any).ready;
+
+    // フォントが実使用可能になるまで待機
+    await (document as any).fonts.load(`16px "${family}"`, "漢"); // 日本語も含めてロード
+    await (document as any).fonts.ready;
+
+    // 代表文字でグリフ有無をチェック（日本語）
+    const hasJP = (document as any).fonts.check(`16px "${family}"`, "漢");
+    // ここで日本語グリフが無い場合はそのまま（後段のfallbackで吸収）
+    // 必要なら UI に警告を出すフラグを立ててもOK
   })();
+
   fontCache.set(key, p);
   await p;
 }
@@ -375,7 +363,7 @@ export default function Page() {
 
       // RANK（テキスト=ラベル扱い→固定フォント）
       draw(rank.toUpperCase(), LAYOUT.rankText.x, LAYOUT.rankText.y, {
-        size: STYLE.rankText.size, color: STYLE.rankText.color, font: FIXED_LABEL_FONT_FAMILY
+        size: STYLE.rankText.size, color: STYLE.rankText.color, font: valueFontFamily
       });
 
       // ランクバッジ
@@ -390,11 +378,8 @@ export default function Page() {
       });
 
       // PLAY STYLE（値＝選択フォント）
-      draw(`平日 ${hourToDisplay(weekdayFrom)} - ${hourToDisplay(weekdayTo)}`, LAYOUT.playWeekday.x, LAYOUT.playWeekday.y, {
+      draw(`平日 ${weekdayFrom} - ${weekdayTo}　休日 ${holidayFrom} - ${holidayTo}`, LAYOUT.playWeekday.x, LAYOUT.playWeekday.y, {
         size: STYLE.playWeekday.size, color: STYLE.playWeekday.color, font: valueFontFamily
-      });
-      draw(`休日 ${hourToDisplay(holidayFrom)} - ${hourToDisplay(holidayTo)}`, LAYOUT.playHoliday.x, LAYOUT.playHoliday.y, {
-        size: STYLE.playHoliday.size, color: STYLE.playHoliday.color, font: valueFontFamily
       });
 
       // 自由表記（値＝選択フォント、wrap）
@@ -420,7 +405,7 @@ export default function Page() {
         const item = FOOTER_SELECT_ITEMS.find(i => i.key === line.key);
         if (!item) return;
         draw(item.label, lyLabel.x, lyLabel.y, {
-          size: STYLE.footerLabel.size, color: STYLE.footerLabel.color, font: FIXED_LABEL_FONT_FAMILY
+          size: STYLE.footerLabel.size, color: STYLE.footerLabel.color, font: valueFontFamily
         });
         if (item.needsAnswer) {
           draw(clampText(line.value, LIMIT.footerAnswer), lyValue.x, lyValue.y, {
@@ -659,7 +644,7 @@ export default function Page() {
 function HourSelect({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
     <select className="bg-neutral-800 rounded-md p-2" value={value} onChange={(e) => onChange(parseInt(e.target.value))}>
-      {HOUR_CHOICES.map(h => <option key={h} value={h}>{h <= 24 ? `${h}:00` : `翌${h - 24}:00`}</option>)}
+      {HOUR_CHOICES.map(h => <option key={h} value={h}>{h}</option>)}
     </select>
   );
 }
