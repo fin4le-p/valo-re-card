@@ -532,7 +532,7 @@ export default function Page() {
     const c = canvasRef.current; if (!c) return;
     const blob: Blob = await new Promise(res => c.toBlob(b => res(b as Blob), "image/png"));
     const file = new File([blob], "valorant-profile.png", { type: "image/png" });
-    const shareText = `${name ? name + " " : ""}#VALORANT`;
+    const shareText = `\n#VALORANT自己紹介カード\n#VALORANT-RE-CARD\n#VALORANT募集`;
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       try { await navigator.share({ files: [file], text: shareText }); return; } catch { /* fallthrough */ }
     }
@@ -725,7 +725,7 @@ export default function Page() {
               rel="noopener noreferrer"
               className="text-blue-400 underline hover:text-blue-300"
             >github</a>
-            <p>re-card v1.0.0</p>
+            <p>re-card v1.0.1</p>
           </div>
         </div>
 
