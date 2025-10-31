@@ -2,12 +2,13 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
-// ----------------------------- 型と定数 -----------------------------
-
+/* =========================================================
+ * 型と定数
+ * =======================================================*/
 type Gender = "male" | "female" | null;
-type ExtraMetricKey = "ACS" | "K/D" | "WINS" | "AGE" | null;
+type ExtraMetricKey = "ACS" | "K/D" | "WINS" | "AGE";
 
-const EXTRA_METRIC_OPTIONS: (ExtraMetricKey | "")[] = ["", "ACS", "K/D", "WINS", "AGE"]; // ""=未選択
+const EXTRA_METRIC_OPTIONS: (ExtraMetricKey | "")[] = ["", "ACS", "K/D", "WINS", "AGE"];
 
 // 0..30（24超は翌時刻）
 const HOUR_CHOICES = Array.from({ length: 31 }, (_, i) => i);
@@ -39,6 +40,18 @@ const FOOTER_SELECT_ITEMS = [
   { key: "welcome_likes", label: "いいねでお迎えします！", needsAnswer: false },
 ] as const;
 
+// フォント表示名/ファミリー名マップ
+const FONT_META: Record<string, { family: string; label?: string }> = {
+  "1_PublicSans-VariableFont.woff2": { family: "PublicSans", label: "Public Sans (既定)" },
+  "2_mushin.woff2": { family: "Mushin", label: "無心" },
+  "3_PopRumCute.woff2": { family: "PopRumCute", label: "ポプらむ☆キュート" },
+  "4_ShinRetroMaruGothic-Bold.woff2": { family: "ShinRetroMaruGothic", label: "新！レトロ丸ゴシック" },
+  "5_zeninshugo-pop.woff2": { family: "ZeninShugoPop", label: "全員集合！ポップ体" },
+};
+// label未設定時のフォールバック
+const getFontLabel = (file: string) => FONT_META[file]?.label ?? file;
+const getFontFamily = (file: string) => FONT_META[file]?.family ?? familyFromFilename(file);
+
 // 文字数上限（暫定・必要に応じ調整）
 const LIMIT = {
   nameLine: 22,
@@ -52,7 +65,7 @@ const BASE_H = 1024;
 
 // ---- ラベル固定フォント（TSX内で強制使用。UIで変更不可） ----
 const FIXED_LABEL_FONT_FAMILY = "PublicSansFixed";
-const FIXED_LABEL_FONT_URL = "/fonts/PublicSans-VariableFont.woff2"; // /opt/.../public 配下は公開URLでこうなる
+const FIXED_LABEL_FONT_URL = "/fonts/1_PublicSans-VariableFont.woff2"; // /opt/.../public 配下は公開URLでこうなる
 
 // 座標
 const LAYOUT = {
@@ -72,7 +85,7 @@ const LAYOUT = {
 
   // 自由表記（1入力を折返し）
   freeStart: { x: 520, y: 735 },
-  freeMaxWidth: 400,
+  freeMaxWidth: 410,
   freeLineHeight: 34,
   freeMaxLines: 2,
 
@@ -95,8 +108,9 @@ const STYLE = {
   footerValue: { size: 24, color: "#decfba" },
 } as const;
 
-// ----------------------------- ユーティリティ -----------------------------
-
+/* =========================================================
+ * ユーティリティ
+ * =======================================================*/
 function clampText(s: string, n: number) { return s.length <= n ? s : s.slice(0, n); }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
@@ -158,9 +172,7 @@ async function ensureFontLoaded(family: string, url: string) {
     await fontCache.get(key)!;
     return;
   }
-
   const p = (async () => {
-    // 常に指定URLからロード（checkで早期returnしない）
     const ff = new FontFace(family, `url("${url}")`, {
       style: "normal",
       weight: "100 900",
@@ -168,23 +180,73 @@ async function ensureFontLoaded(family: string, url: string) {
     });
     const loaded = await ff.load();
     (document as any).fonts.add(loaded);
-
-    // フォントが実使用可能になるまで待機
-    await (document as any).fonts.load(`16px "${family}"`, "漢"); // 日本語も含めてロード
+    await (document as any).fonts.load(`16px "${family}"`, "漢"); // CJKもロード
     await (document as any).fonts.ready;
-
-    // 代表文字でグリフ有無をチェック（日本語）
-    const hasJP = (document as any).fonts.check(`16px "${family}"`, "漢");
-    // ここで日本語グリフが無い場合はそのまま（後段のfallbackで吸収）
-    // 必要なら UI に警告を出すフラグを立ててもOK
   })();
-
   fontCache.set(key, p);
   await p;
 }
 
-// ----------------------------- メイン -----------------------------
+/* =========================================================
+ * フォント正規化（高さ＋横幅）
+ *  - 高さ: 基準フォント(1_PublicSans)に合わせる
+ *  - 横幅: 同じテキストを基準フォント幅に収まるようにだけ縮小（拡大しない）
+ * =======================================================*/
+const fontHeightScaleCache = new Map<string, number>();
 
+function measureHeight(ctx: CanvasRenderingContext2D, fontStack: string, px: number, sample = "H漢Aあ") {
+  ctx.font = `400 ${px}px ${fontStack}`;
+  const m = ctx.measureText(sample);
+  const h = (m.actualBoundingBoxAscent ?? 0) + (m.actualBoundingBoxDescent ?? 0);
+  return h || m.width * 0.7;
+}
+
+async function getFontHeightScale(targetFontStack: string, baseFamily = FIXED_LABEL_FONT_FAMILY) {
+  const key = `${targetFontStack}=>${baseFamily}`;
+  if (fontHeightScaleCache.has(key)) return fontHeightScaleCache.get(key)!;
+
+  const testPx = 100;
+  const cvs = document.createElement("canvas");
+  const ctx = cvs.getContext("2d")!;
+  const hBase = measureHeight(ctx, `"${baseFamily}"`, testPx);
+  const hTarget = measureHeight(ctx, targetFontStack, testPx);
+  const scale = hBase && hTarget ? hBase / hTarget : 1;
+  fontHeightScaleCache.set(key, scale);
+  return scale;
+}
+
+function measureWidth(ctx: CanvasRenderingContext2D, fontStack: string, px: number, text: string) {
+  ctx.font = `400 ${px}px ${fontStack}`;
+  return ctx.measureText(text).width;
+}
+
+/** 高さ合わせ後、横幅が基準より広いときだけ縮小する最終pxを返す */
+function finalScaledPxByText(
+  ctx: CanvasRenderingContext2D,
+  baseFamily: string,
+  targetStack: string,
+  designPx: number,
+  heightScale: number,
+  text: string
+) {
+  // まず高さ合わせだけを適用
+  const pxAfterHeight = Math.max(1, Math.round(designPx * heightScale));
+
+  // 同じテキストで、基準フォント＝デザインpx、対象フォント＝高さ補正後px で幅を比較
+  const baseW = measureWidth(ctx, `"${baseFamily}"`, designPx, text);
+  const targetW = measureWidth(ctx, targetStack, pxAfterHeight, text);
+
+  if (targetW <= 0 || baseW <= 0) return pxAfterHeight;
+
+  // 対象のほうが広いなら、基準に収まるよう縮小率を掛ける（拡大はしない）
+  const widthLimitScale = targetW > baseW ? (baseW / targetW) : 1;
+  const finalPx = Math.max(1, Math.floor(pxAfterHeight * widthLimitScale));
+  return finalPx;
+}
+
+/* =========================================================
+ * メイン
+ * =======================================================*/
 export default function Page() {
   // 動的データ
   const [cardImages, setCardImages] = useState<string[]>([]);
@@ -195,8 +257,14 @@ export default function Page() {
   // 値側フォント（ユーザー選択）：ファイル名と family 名
   const [valueFontFile, setValueFontFile] = useState<string>("");
   const valueFontFamily = useMemo(
-    () => (valueFontFile ? familyFromFilename(valueFontFile) : "system-ui"),
+    () => (valueFontFile ? getFontFamily(valueFontFile) : "system-ui"),
     [valueFontFile]
+  );
+  // 値側はスタック（英字専用フォント選択時のCJKフォールバック安定化）
+  const valueFontStack = useMemo(
+    () =>
+      `"${valueFontFamily}", "Noto Sans JP", "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", sans-serif`,
+    [valueFontFamily]
   );
 
   // 入力フォーム
@@ -238,21 +306,20 @@ export default function Page() {
 
       const files: string[] = fontsRes.fonts || [];
       setFontFiles(files);
-      // 値側フォントの初期選択：PublicSans 以外の先頭 / それが無ければ先頭
-      const initial = files.find(f => !/PublicSans-VariableFont/i.test(f)) || files[0];
-      if (initial) setValueFontFile(initial);
+      // 値側フォントの初期選択：先頭
+      setValueFontFile(files[0]);
 
       setRankBadgeBase(ranksRes.base || "/ranks");
       setAgents(agentsRes.agents || ["Astra", "Jett"]);
       if (!agentsRes.agents?.length) setMain1("Astra");
 
-      // 固定ラベルフォントをロード（以後は常に使える）
+      // 基準（ラベル）フォントをロード
       await ensureFontLoaded(FIXED_LABEL_FONT_FAMILY, FIXED_LABEL_FONT_URL);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // 表示用エージェント
+  // 表示用エージェント（スラッシュだけ赤）
   const agentDisplay = useMemo(() => {
     const a1 = main1?.trim()?.toUpperCase();
     const a2 = main2?.trim()?.toUpperCase();
@@ -260,11 +327,10 @@ export default function Page() {
     if (a1 && a2) {
       return [
         { text: a1 },
-        { text: " / ", color: "#e6383f" }, // ← スラッシュだけ赤に
+        { text: " / ", color: "#e6383f" },
         { text: a2 },
       ];
     }
-
     if (a1) return [{ text: a1 }];
     return [{ text: "astra" }];
   }, [main1, main2]);
@@ -288,7 +354,7 @@ export default function Page() {
       const canvas = canvasRef.current;
       if (!canvas || !selectedCard) return;
 
-      // 1) ラベル固定フォントを保証
+      // 1) ラベル（基準）フォントを保証
       await ensureFontLoaded(FIXED_LABEL_FONT_FAMILY, FIXED_LABEL_FONT_URL);
 
       // 2) 値側フォントを選択ファイルからロード
@@ -297,7 +363,10 @@ export default function Page() {
         await ensureFontLoaded(valueFontFamily, url);
       }
 
-      // 3) 描画開始
+      // 3) 値側フォントの高さスケール（基準に合わせる）
+      const heightScale = await getFontHeightScale(valueFontStack);
+
+      // 4) 描画開始
       canvas.width = BASE_W;
       canvas.height = BASE_H;
       const ctx = canvas.getContext("2d");
@@ -307,38 +376,44 @@ export default function Page() {
       const bg = await loadImage(selectedCard);
       ctx.drawImage(bg, 0, 0, BASE_W, BASE_H);
 
+      // 統一描画ヘルパ（単色 or 部分色）
       const draw = (
         textOrParts: string | { text: string; color?: string }[],
         x: number, y: number,
-        opts: { size: number; color: string; font: string; align?: CanvasTextAlign }
+        opts: { size: number; color: string; font: string; align?: CanvasTextAlign; weight?: number | string; widthFit?: boolean }
       ) => {
-        ctx.font = `${opts.size}px "${opts.font}"`;
+        const weight = opts.weight ?? 400;
         ctx.textAlign = opts.align || "left";
         ctx.textBaseline = "middle";
 
-        // ---- ここから追加：配列でも文字列でも対応 ----
+        // 幅フィットの判定用に全文字列化
+        const fullText = typeof textOrParts === "string"
+          ? textOrParts
+          : textOrParts.map(p => p.text).join("");
+
+        const finalPx = opts.widthFit
+          ? finalScaledPxByText(ctx, FIXED_LABEL_FONT_FAMILY, opts.font, opts.size, heightScale, fullText)
+          : Math.max(1, Math.round(opts.size * heightScale));
+
+        // 実描画
+        ctx.font = `${weight} ${finalPx}px ${opts.font}`;
         if (typeof textOrParts === "string") {
-          // 普通の一色テキスト
           ctx.fillStyle = opts.color;
           ctx.fillText(textOrParts, x, y);
-          return;
+        } else {
+          let cursorX = x;
+          for (const part of textOrParts) {
+            ctx.fillStyle = part.color ?? opts.color;
+            ctx.fillText(part.text, cursorX, y);
+            cursorX += ctx.measureText(part.text).width;
+          }
         }
-
-        // 部分色付きテキスト（配列）
-        let cursorX = x;
-        for (const part of textOrParts) {
-          ctx.fillStyle = part.color ?? opts.color;
-          ctx.fillText(part.text, cursorX, y);
-          cursorX += ctx.measureText(part.text).width;
-        }
-        // ---- ここまで ----
       };
 
-
-      // NAME（値＝選択フォント）
+      // NAME（値＝選択フォント） → 幅フィット有効
       if (name) {
         draw(clampText(name, LIMIT.nameLine), LAYOUT.name.x, LAYOUT.name.y, {
-          size: STYLE.nameValue.size, color: STYLE.nameValue.color, font: valueFontFamily
+          size: STYLE.nameValue.size, color: STYLE.nameValue.color, font: valueFontStack, widthFit: true
         });
       }
 
@@ -349,42 +424,48 @@ export default function Page() {
         drawCircle(ctx, LAYOUT.typeFemaleCircle.x, LAYOUT.typeFemaleCircle.y, LAYOUT.typeFemaleCircle.r, "#e6383f", 3);
       }
 
-      // TYPE 右：追加メトリクス（ラベル=固定 / 値=選択）
+      // TYPE右：追加メトリクス（ラベル=固定 / 値=選択）
       if (typeExtraKey) {
-        draw(`${typeExtraKey}`, LAYOUT.typeExtraLabel.x, LAYOUT.typeExtraLabel.y, {
-          size: STYLE.typeExtraLabel.size, color: STYLE.typeExtraLabel.color, font: FIXED_LABEL_FONT_FAMILY
-        });
+        // ラベル（固定フォント）
+        ctx.font = `400 ${STYLE.typeExtraLabel.size}px "${FIXED_LABEL_FONT_FAMILY}"`;
+        ctx.fillStyle = STYLE.typeExtraLabel.color;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(`${typeExtraKey}`, LAYOUT.typeExtraLabel.x, LAYOUT.typeExtraLabel.y);
+
         if (["ACS", "K/D", "WINS", "AGE"].includes(typeExtraKey)) {
           draw(clampText(typeExtraVal, LIMIT.typeExtraValue), LAYOUT.typeExtraValue.x, LAYOUT.typeExtraValue.y, {
-            size: STYLE.typeExtraValue.size, color: STYLE.typeExtraValue.color, font: valueFontFamily
+            size: STYLE.typeExtraValue.size, color: STYLE.typeExtraValue.color, font: valueFontStack, widthFit: true
           });
         }
       }
 
-      // RANK（テキスト=ラベル扱い→固定フォント）
+      // RANK（値側フォントで表示、幅フィット有効）
       draw(rank.toUpperCase(), LAYOUT.rankText.x, LAYOUT.rankText.y, {
-        size: STYLE.rankText.size, color: STYLE.rankText.color, font: valueFontFamily
+        size: STYLE.rankText.size, color: STYLE.rankText.color, font: valueFontStack, widthFit: true
       });
 
       // ランクバッジ
       try {
         const badge = await loadImage(`${rankBadgeBase}/${rank}.png`);
         ctx.drawImage(badge, LAYOUT.rankBadge.x, LAYOUT.rankBadge.y, LAYOUT.rankBadge.size, LAYOUT.rankBadge.size);
-      } catch {/* 画像なしは無視 */ }
+      } catch { /* 画像なしは無視 */ }
 
-      // MAIN AGENT（値＝選択フォント）
+      // MAIN AGENT（値＝選択フォント、スラッシュ赤）→ 幅フィット有効（全体の幅で判定）
       draw(agentDisplay, LAYOUT.mainAgent.x, LAYOUT.mainAgent.y, {
-        size: STYLE.agentValue.size, color: STYLE.agentValue.color, font: valueFontFamily
+        size: STYLE.agentValue.size, color: STYLE.agentValue.color, font: valueFontStack, widthFit: true
       });
 
-      // PLAY STYLE（値＝選択フォント）
-      draw(`平日 ${weekdayFrom} - ${weekdayTo}　休日 ${holidayFrom} - ${holidayTo}`, LAYOUT.playWeekday.x, LAYOUT.playWeekday.y, {
-        size: STYLE.playWeekday.size, color: STYLE.playWeekday.color, font: valueFontFamily
+      // PLAY STYLE（値＝選択フォント）→ 幅フィット有効
+      const playStr = `平日 ${weekdayFrom} - ${weekdayTo}　休日 ${holidayFrom} - ${holidayTo}`;
+      draw(playStr, LAYOUT.playWeekday.x, LAYOUT.playWeekday.y, {
+        size: STYLE.playWeekday.size, color: STYLE.playWeekday.color, font: valueFontStack, widthFit: true
       });
 
-      // 自由表記（値＝選択フォント、wrap）
+      // 自由表記（wrap）→ 横幅は折返しで制御するので高さだけ補正
       if (freeText) {
-        ctx.font = `${STYLE.free.size}px "${valueFontFamily}"`;
+        const px = Math.max(1, Math.round(STYLE.free.size * heightScale));
+        ctx.font = `400 ${px}px ${valueFontStack}`;
         ctx.fillStyle = STYLE.free.color;
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
@@ -394,22 +475,37 @@ export default function Page() {
           LAYOUT.freeStart.x,
           LAYOUT.freeStart.y,
           LAYOUT.freeMaxWidth,
-          LAYOUT.freeLineHeight,
+          LAYOUT.freeLineHeight, // 行間はデザイン値のまま（必要なら heightScale を掛ける）
           LAYOUT.freeMaxLines
         );
       }
 
-      // フッター 2 行（ラベル=固定 / 値=選択）
+      // フッター 2 行
       const drawFooter = (line: FooterLine, lyLabel: { x: number, y: number }, lyValue: { x: number, y: number }) => {
         if (!line.key) return;
         const item = FOOTER_SELECT_ITEMS.find(i => i.key === line.key);
         if (!item) return;
-        draw(item.label, lyLabel.x, lyLabel.y, {
-          size: STYLE.footerLabel.size, color: STYLE.footerLabel.color, font: valueFontFamily
-        });
+
+        // ラベル（固定フォント）
+        const labelText = item.label;
+        const px = finalScaledPxByText(
+          ctx,
+          FIXED_LABEL_FONT_FAMILY,   // 基準フォント
+          valueFontStack,            // 対象フォント
+          STYLE.footerLabel.size,    // デザイン上のサイズ(px)
+          heightScale,               // 高さ補正スケール
+          labelText                  // 判定テキスト
+        );
+        ctx.font = `400 ${px}px ${valueFontStack}`;
+        ctx.fillStyle = STYLE.footerLabel.color;
+        ctx.textAlign = "left";
+        ctx.textBaseline = "middle";
+        ctx.fillText(labelText, lyLabel.x, lyLabel.y);
+
+        // 値（選択フォント）→ 幅フィット有効
         if (item.needsAnswer) {
           draw(clampText(line.value, LIMIT.footerAnswer), lyValue.x, lyValue.y, {
-            size: STYLE.footerValue.size, color: STYLE.footerValue.color, font: valueFontFamily
+            size: STYLE.footerValue.size, color: STYLE.footerValue.color, font: valueFontStack, widthFit: true
           });
         }
       };
@@ -417,10 +513,7 @@ export default function Page() {
       drawFooter(footer2, LAYOUT.footer2Label, LAYOUT.footer2Value);
     })();
   }, [
-    // フォント変更時に必ず再描画（※ valueFontFile / family）
-    valueFontFile, valueFontFamily,
-
-    // 画像・入力値変更時も再描画
+    valueFontFile, valueFontFamily, valueFontStack,
     selectedCard, name, gender, typeExtraKey, typeExtraVal,
     rank, main1, main2, weekdayFrom, weekdayTo, holidayFrom, holidayTo,
     freeText, footer1, footer2, rankBadgeBase
@@ -441,7 +534,7 @@ export default function Page() {
     const file = new File([blob], "valorant-profile.png", { type: "image/png" });
     const shareText = `${name ? name + " " : ""}#VALORANT`;
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try { await navigator.share({ files: [file], text: shareText }); return; } catch { }
+      try { await navigator.share({ files: [file], text: shareText }); return; } catch { /* fallthrough */ }
     }
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
@@ -464,7 +557,9 @@ export default function Page() {
     return () => window.removeEventListener("resize", calc);
   }, []);
 
-  // ----------------------------- UI -----------------------------
+  /* =========================================================
+   * UI
+   * =======================================================*/
   return (
     <div className="mx-auto max-w-[1800px] px-4 md:px-6 py-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -478,7 +573,11 @@ export default function Page() {
               value={selectedCard}
               onChange={(e) => setSelectedCard(e.target.value)}
             >
-              {cardImages.map((p) => <option key={p} value={p}>{p}</option>)}
+              {cardImages.map((p) => {
+                const filename = p.split("/").pop() || p;        // 末尾のファイル名を抽出
+                const display = filename.replace(/\.[^.]+$/, ""); // 拡張子削除
+                return <option key={p} value={p}>{display}</option>;
+              })}
             </select>
             <p className="text-sm text-neutral-400 mt-2">/api/list-cards に設定したフォルダへ追加で即反映（ビルド不要）</p>
           </section>
@@ -492,10 +591,11 @@ export default function Page() {
               onChange={(e) => setValueFontFile(e.target.value)}
             >
               {[valueFontFile, ...fontFiles.filter(f => f !== valueFontFile)].map(f => (
-                <option key={f} value={f}>{f}</option>
+                <option key={f} value={f}>{getFontLabel(f)}</option>
               ))}
             </select>
             <p className="text-xs text-neutral-500 mt-2">
+              現在の family: <code>{valueFontFamily}</code><br />
               ※ ラベル系は固定フォント：<code>{FIXED_LABEL_FONT_URL}</code>（family: <code>{FIXED_LABEL_FONT_FAMILY}</code>）
             </p>
           </section>
@@ -621,6 +721,15 @@ export default function Page() {
             <button className="px-4 py-2 rounded-md bg-rose-600 hover:bg-rose-500" onClick={onDownload}>PNGをダウンロード</button>
             <button className="px-4 py-2 rounded-md bg-sky-600 hover:bg-sky-500" onClick={onShare}>共有（Xなど）</button>
           </section>
+          <div className="text-sm opacity-70 leading-relaxed">
+            <a
+              href="https://github.com/fin4le-p/valo-re-card"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-400 underline hover:text-blue-300"
+            >github</a>
+            <p>re-card v1.0.0</p>
+          </div>
         </div>
 
         {/* 右：プレビュー（SPでは上・sticky追尾） */}
@@ -639,8 +748,9 @@ export default function Page() {
   );
 }
 
-// ----------------------------- 補助コンポーネント -----------------------------
-
+/* =========================================================
+ * 補助コンポーネント
+ * =======================================================*/
 function HourSelect({ value, onChange }: { value: number; onChange: (v: number) => void }) {
   return (
     <select className="bg-neutral-800 rounded-md p-2" value={value} onChange={(e) => onChange(parseInt(e.target.value))}>
