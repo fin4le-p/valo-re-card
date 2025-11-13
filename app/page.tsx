@@ -715,7 +715,7 @@ export default function Page() {
 
           {/* 10) アクション */}
           <section className="p-4 rounded-2xl border border-neutral-800 bg-neutral-900/40 flex gap-3">
-            <button className="px-4 py-2 rounded-md bg-rose-600 hover:bg-rose-500" onClick={onDownload}>PNGをダウンロード</button>
+            <button className="px-4 py-2 rounded-md bg-rose-600 hover:bg-rose-500" onClick={onDownload}>画像をダウンロード</button>
             <button className="px-4 py-2 rounded-md bg-sky-600 hover:bg-sky-500" onClick={onShare}>共有（Xなど）</button>
           </section>
           <div className="text-sm opacity-70 leading-relaxed">
@@ -725,7 +725,7 @@ export default function Page() {
               rel="noopener noreferrer"
               className="text-blue-400 underline hover:text-blue-300"
             >github</a>
-            <p>re-card v1.0.1</p>
+            <p>re-card v1.0.2</p>
           </div>
         </div>
 
