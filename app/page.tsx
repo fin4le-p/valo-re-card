@@ -718,15 +718,6 @@ export default function Page() {
             <button className="px-4 py-2 rounded-md bg-rose-600 hover:bg-rose-500" onClick={onDownload}>画像をダウンロード</button>
             <button className="px-4 py-2 rounded-md bg-sky-600 hover:bg-sky-500" onClick={onShare}>共有（Xなど）</button>
           </section>
-          <div className="text-sm opacity-70 leading-relaxed">
-            <a
-              href="https://github.com/fin4le-p/valo-re-card"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-blue-400 underline hover:text-blue-300"
-            >github</a>
-            <p>re-card v1.0.2</p>
-          </div>
         </div>
 
         {/* 右：プレビュー（SPでは上・sticky追尾） */}
@@ -740,6 +731,119 @@ export default function Page() {
             </div>
           </div>
         </div>
+      </div>
+
+      <section className="mt-16 mb-16 mx-auto space-y-10 text-sm md:text-base text-neutral-200">
+        {/* 概要 */}
+        <article className="rounded-xl bg-neutral-900/80 border border-neutral-800 px-6 py-7 shadow-sm shadow-black/40">
+          <header className="mb-4">
+            <p className="inline-flex items-center gap-2 rounded-full bg-rose-900/40 text-[11px] font-medium px-3 py-1 tracking-wide text-rose-200">
+              VALORANT FAN MADE TOOL
+            </p>
+            <h2 className="mt-3 text-2xl md:text-3xl font-bold">
+              VALORANT 自己紹介カードメーカー「Re:Card」とは？
+            </h2>
+          </header>
+          <p className="leading-relaxed text-neutral-300">
+            Re:Card（リカード）は、タクティカルFPS「VALORANT（ヴァロラント）」向けの
+            自己紹介カード画像をブラウザ上で簡単に作成できる非公式ファンツールです。
+            ランクやメインエージェント、活動時間、NG行動、募集スタイルなどを入力するだけで、
+            フレンド募集やクラン募集、固定メンバー探しに使える一枚を自動生成します。
+          </p>
+          <p className="mt-3 leading-relaxed text-neutral-300">
+            作成したカードは PNG 形式でダウンロードでき、そのまま
+            X（旧Twitter）の固定ツイートや募集ツイート、Discord サーバーの自己紹介チャンネル、
+            募集掲示板などで自由にお使いいただけます。
+          </p>
+        </article>
+
+        {/* 特徴 */}
+        <article className="rounded-xl bg-neutral-900/80 border border-neutral-800 px-6 py-7 shadow-sm shadow-black/40">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-9 w-1.5 rounded-full bg-gradient-to-b from-rose-500 to-orange-400" />
+            <h3 className="text-xl md:text-2xl font-semibold">
+              Re:Card でできること・主な特徴
+            </h3>
+          </div>
+          <ul className="list-disc pl-5 space-y-2 text-neutral-300">
+            <li>ブラウザだけで完結する VALORANT 自己紹介カードの自動生成</li>
+            <li>ランクバッジ・メインエージェント・活動時間・NG行動などを細かく設定可能</li>
+            <li>カード背景とフォントを切り替えて、自分の雰囲気に合わせたデザインを選べる</li>
+            <li>フッター欄に「Platform / Server / NG行動」などの情報を載せて、ミスマッチを減らせる</li>
+            <li>一度作っておけば、フレンド募集や大会募集のたびに使い回せる</li>
+          </ul>
+        </article>
+
+        {/* 使い方 */}
+        <article className="rounded-xl bg-neutral-900/80 border border-neutral-800 px-6 py-7 shadow-sm shadow-black/40">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-9 w-1.5 rounded-full bg-gradient-to-b from-sky-500 to-cyan-400" />
+            <h3 className="text-xl md:text-2xl font-semibold">
+              具体的な使い方（かんたん 3 ステップ）
+            </h3>
+          </div>
+          <ol className="list-decimal pl-5 space-y-3 text-neutral-300">
+            <li>
+              画面左側のフォームで、
+              <strong>名前・ランク・メインエージェント・活動時間</strong>などを入力します。
+              フッター欄に「NG行動」や「いつでも誘われ待ち」などを設定することもできます。
+            </li>
+            <li>
+              プレビューを確認しながら、背景デザインやフォントを変更して、
+              自分のプレイスタイルやイメージに合うカードになるよう調整します。
+            </li>
+            <li>
+              「画像をダウンロード」ボタンで PNG ファイルを書き出し、
+              X の募集ツイートや固定ツイート、Discord 等に画像を貼り付けて使用します。
+            </li>
+          </ol>
+        </article>
+
+        {/* 利用シーン */}
+        <article className="rounded-xl bg-neutral-900/80 border border-neutral-800 px-6 py-7 shadow-sm shadow-black/40">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="h-9 w-1.5 rounded-full bg-gradient-to-b from-emerald-500 to-lime-400" />
+            <h3 className="text-xl md:text-2xl font-semibold">
+              おすすめの使い方・想定シーン
+            </h3>
+          </div>
+          <p className="leading-relaxed text-neutral-300">
+            Re:Card は、ランク別のフルパ募集やカスタム大会、固定メンバー募集、
+            ランク上げ固定の募集など、「自分がどんなプレイヤーなのかを一目で伝えたい」
+            場面に向いています。事前に活動時間やNG行動・得意エージェントを書いておくことで、
+            マッチング後のすれ違いやトラブルを減らし、相性の良いプレイヤーと出会いやすくなります。
+          </p>
+          <p className="mt-3 leading-relaxed text-neutral-300">
+            X で募集する場合は、
+            <span className="font-mono"> #VALORANT自己紹介カード </span>
+            <span className="font-mono"> #VALORANT募集 </span>
+            などのハッシュタグと一緒に投稿すると、
+            同じくフレンドや固定メンバーを探しているプレイヤーに見つけてもらいやすくなります。
+          </p>
+        </article>
+
+        {/* 注意事項 */}
+        <article className="rounded-xl bg-neutral-950 border border-neutral-800 px-6 py-7">
+          <h3 className="text-lg md:text-xl font-semibold mb-3">
+            注意事項・免責について
+          </h3>
+          <p className="leading-relaxed text-neutral-400">
+            Re:Card は Riot Games および VALORANT の非公式ファンメイドツールです。
+            本ツールの利用により発生したいかなるトラブルや損害についても、
+            開発者は一切の責任を負いません。各種プラットフォームの利用規約や
+            Riot Games のガイドラインを確認した上で、マナーを守ってご利用ください。
+          </p>
+        </article>
+      </section>
+
+      <div className="text-sm opacity-70 leading-relaxed">
+        <a
+          href="https://github.com/fin4le-p/valo-re-card"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-blue-400 underline hover:text-blue-300"
+        >github</a>
+        <p>re-card v1.0.3</p>
       </div>
     </div>
   );

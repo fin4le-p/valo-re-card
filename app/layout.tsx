@@ -14,13 +14,13 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Re:Card ヴァロラント自己紹介カードメーカー",
-  description: "Valorant自己紹介カードを作ろう！",
+  description: "ヴァロラントのランク・エージェント・活動時間などを書いた自己紹介カードをブラウザで簡単に作れるツール",
   icons: {
     icon: "/favicon.ico",
   },
   openGraph: {
     title: "VALORANT Re:Card",
-    description: "Valorant自己紹介カードを作ろう！",
+    description: "ヴァロラントのランク・エージェント・活動時間などを書いた自己紹介カードをブラウザで簡単に作れるツール",
     url: "https://re-card.nakano6.com",
     siteName: "VALORANT Re:Card",
     images: [
@@ -37,7 +37,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "VALORANT Re:Card",
-    description: "VALORANT自己紹介カードを作ろう！",
+    description: "ヴァロラントのランク・エージェント・活動時間などを書いた自己紹介カードをブラウザで簡単に作れるツール",
     images: ["/ogp.png"],
     creator: "@your_twitter_id",
   },
