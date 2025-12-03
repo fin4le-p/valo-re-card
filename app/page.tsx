@@ -838,11 +838,11 @@ export default function Page() {
 
       <div className="text-sm opacity-70 leading-relaxed">
         <a
-          href="https://github.com/fin4le-p/valo-re-card"
+          href="https://nakano6.com/privacy-policy"
           target="_blank"
           rel="noopener noreferrer"
           className="text-blue-400 underline hover:text-blue-300"
-        >github</a>
+        >プライバシーポリシー</a>
         <p>re-card v1.0.3</p>
       </div>
     </div>
